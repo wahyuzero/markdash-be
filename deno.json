@@ -1,0 +1,39 @@
+{
+  "tasks": {
+    "start": "deno run --allow-net --allow-env --unstable-kv src/main.ts",
+    "dev": "deno run --allow-net --allow-env --unstable-kv --watch src/main.ts",
+    "deploy": "deployctl deploy --project=markdash src/main.ts"
+  },
+  "imports": {
+    "oak": "https://deno.land/x/oak@v12.6.1/mod.ts",
+    "cors": "https://deno.land/x/cors@v1.2.2/mod.ts",
+    "bcrypt": "https://deno.land/x/bcrypt@v0.4.1/mod.ts",
+    "djwt": "https://deno.land/x/djwt@v3.0.1/mod.ts"
+  },
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window"],
+    "strict": true
+  },
+  "fmt": {
+    "files": {
+      "include": ["src/"]
+    },
+    "options": {
+      "useTabs": false,
+      "lineWidth": 100,
+      "indentWidth": 2,
+      "semiColons": true,
+      "singleQuote": false,
+      "proseWrap": "preserve"
+    }
+  },
+  "lint": {
+    "files": {
+      "include": ["src/"]
+    },
+    "rules": {
+      "tags": ["recommended"]
+    }
+  }
+}
