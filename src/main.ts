@@ -14,15 +14,18 @@ console.log("✅ Deno KV initialized");
 
 const app = new Application();
 
-// Get port from environment (Deno Deploy sets this automatically)
+// Get port from environment (Deno Deploy uses env PORT)
 const PORT = parseInt(Deno.env.get("PORT") || "8000");
 const isDevelopment = Deno.env.get("DENO_DEPLOYMENT_ID") === undefined;
+
+console.log(`Environment: ${isDevelopment ? "development" : "production"}`);
+console.log(`Port: ${PORT}`);
 
 // CORS middleware
 app.use(
   oakCors({
     origin: "*", // In production, specify your frontend domain
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
@@ -70,9 +73,14 @@ app.use(notifyRouter.allowedMethods());
 app.use(exportRouter.routes());
 app.use(exportRouter.allowedMethods());
 
-// Health check endpoint
+// Health check endpoint (IMPORTANT for Deno Deploy warm up)
 app.use((ctx) => {
-  if (ctx.request.url.pathname === "/") {
+  if (
+    ctx.request.url.pathname === "/" ||
+    ctx.request.url.pathname === "/health"
+  ) {
+    ctx.response.status = 200;
+    ctx.response.headers.set("Content-Type", "application/json");
     ctx.response.body = {
       status: "ok",
       message: "MarkDash API is running",
@@ -81,6 +89,8 @@ app.use((ctx) => {
       timestamp: new Date().toISOString(),
     };
   } else if (ctx.request.url.pathname === "/api") {
+    ctx.response.status = 200;
+    ctx.response.headers.set("Content-Type", "application/json");
     ctx.response.body = {
       status: "ok",
       endpoints: {
@@ -119,6 +129,7 @@ app.use((ctx) => {
     };
   } else {
     ctx.response.status = 404;
+    ctx.response.headers.set("Content-Type", "application/json");
     ctx.response.body = {
       success: false,
       error: "Not found",
@@ -132,7 +143,12 @@ const startMessage = isDevelopment
 
 console.log(startMessage);
 
-// Listen on all interfaces for Deno Deploy
+// Critical: Set signal to indicate server is ready
+app.addEventListener("listen", () => {
+  console.log(`✅ Server listening on port ${PORT}`);
+});
+
+// Listen - Deno Deploy will use env PORT
 await app.listen({
   port: PORT,
   hostname: "0.0.0.0",
