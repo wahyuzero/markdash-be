@@ -13,7 +13,10 @@ await initKV();
 console.log("✅ Deno KV initialized");
 
 const app = new Application();
+
+// Get port from environment (Deno Deploy sets this automatically)
 const PORT = parseInt(Deno.env.get("PORT") || "8000");
+const isDevelopment = Deno.env.get("DENO_DEPLOYMENT_ID") === undefined;
 
 // CORS middleware
 app.use(
@@ -24,15 +27,17 @@ app.use(
   }),
 );
 
-// Logger middleware
-app.use(async (ctx, next) => {
-  const start = Date.now();
-  await next();
-  const ms = Date.now() - start;
-  console.log(
-    `${ctx.request.method} ${ctx.request.url.pathname} - ${ctx.response.status} - ${ms}ms`,
-  );
-});
+// Logger middleware (only in development)
+if (isDevelopment) {
+  app.use(async (ctx, next) => {
+    const start = Date.now();
+    await next();
+    const ms = Date.now() - start;
+    console.log(
+      `${ctx.request.method} ${ctx.request.url.pathname} - ${ctx.response.status} - ${ms}ms`,
+    );
+  });
+}
 
 // Error handling middleware
 app.use(async (ctx, next) => {
@@ -44,7 +49,7 @@ app.use(async (ctx, next) => {
     ctx.response.body = {
       success: false,
       error: "Internal server error",
-      message: err.message,
+      message: isDevelopment ? err.message : "An error occurred",
     };
   }
 });
@@ -72,6 +77,7 @@ app.use((ctx) => {
       status: "ok",
       message: "MarkDash API is running",
       version: "1.0.0",
+      environment: isDevelopment ? "development" : "production",
       timestamp: new Date().toISOString(),
     };
   } else if (ctx.request.url.pathname === "/api") {
@@ -120,5 +126,14 @@ app.use((ctx) => {
   }
 });
 
-console.log(`🚀 MarkDash API server running on http://localhost:${PORT}`);
-await app.listen({ port: PORT });
+const startMessage = isDevelopment
+  ? `🚀 MarkDash API (DEV) running on http://localhost:${PORT}`
+  : `🚀 MarkDash API (PROD) running`;
+
+console.log(startMessage);
+
+// Listen on all interfaces for Deno Deploy
+await app.listen({
+  port: PORT,
+  hostname: "0.0.0.0",
+});

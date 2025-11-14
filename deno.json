@@ -2,13 +2,19 @@
   "tasks": {
     "start": "deno run --allow-net --allow-env --unstable-kv src/main.ts",
     "dev": "deno run --allow-net --allow-env --unstable-kv --watch src/main.ts",
-    "deploy": "deployctl deploy --project=markdash src/main.ts"
+    "deploy": "deployctl deploy --project=markdash src/main.ts",
+    "build": "echo 'No build required for Oak backend'"
   },
   "imports": {
     "oak": "https://deno.land/x/oak@v12.6.1/mod.ts",
     "cors": "https://deno.land/x/cors@v1.2.2/mod.ts",
     "bcrypt": "https://deno.land/x/bcrypt@v0.4.1/mod.ts",
     "djwt": "https://deno.land/x/djwt@v3.0.1/mod.ts"
+  },
+  "deploy": {
+    "project": "markdash-api",
+    "entrypoint": "src/main.ts",
+    "exclude": [".git", ".env", "*.md", ".vscode", "node_modules"]
   },
   "compilerOptions": {
     "allowJs": true,
