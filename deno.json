@@ -3,7 +3,7 @@
     "start": "deno run --allow-net --allow-env --unstable-kv src/main.ts",
     "dev": "deno run --allow-net --allow-env --unstable-kv --watch src/main.ts",
     "deploy": "deployctl deploy --project=markdash src/main.ts",
-    "build": "echo 'No build required for Oak backend'"
+    "build": "echo 'No build step required'"
   },
   "imports": {
     "oak": "https://deno.land/x/oak@v12.6.1/mod.ts",
@@ -11,35 +11,21 @@
     "bcrypt": "https://deno.land/x/bcrypt@v0.4.1/mod.ts",
     "djwt": "https://deno.land/x/djwt@v3.0.1/mod.ts"
   },
-  "deploy": {
-    "project": "markdash-api",
-    "entrypoint": "src/main.ts",
-    "exclude": [".git", ".env", "*.md", ".vscode", "node_modules"]
-  },
   "compilerOptions": {
-    "allowJs": true,
     "lib": ["deno.window"],
     "strict": true
   },
   "fmt": {
-    "files": {
-      "include": ["src/"]
-    },
-    "options": {
-      "useTabs": false,
-      "lineWidth": 100,
-      "indentWidth": 2,
-      "semiColons": true,
-      "singleQuote": false,
-      "proseWrap": "preserve"
-    }
+    "useTabs": false,
+    "lineWidth": 100,
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": false
   },
   "lint": {
-    "files": {
-      "include": ["src/"]
-    },
     "rules": {
       "tags": ["recommended"]
     }
-  }
+  },
+  "exclude": [".git", ".env", "*.md", ".vscode", "node_modules", "dist"]
 }
