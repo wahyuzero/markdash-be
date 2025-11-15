@@ -14,7 +14,7 @@ console.log("✅ Deno KV initialized");
 
 const app = new Application();
 
-// Get port from environment (Deno Deploy uses env PORT)
+// Get port from environment
 const PORT = parseInt(Deno.env.get("PORT") || "8000");
 const isDevelopment = Deno.env.get("DENO_DEPLOYMENT_ID") === undefined;
 
@@ -24,7 +24,7 @@ console.log(`Port: ${PORT}`);
 // CORS middleware
 app.use(
   oakCors({
-    origin: "*", // In production, specify your frontend domain
+    origin: "*",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
@@ -73,7 +73,7 @@ app.use(notifyRouter.allowedMethods());
 app.use(exportRouter.routes());
 app.use(exportRouter.allowedMethods());
 
-// Health check endpoint (IMPORTANT for Deno Deploy warm up)
+// Health check endpoint - MUST be last
 app.use((ctx) => {
   if (
     ctx.request.url.pathname === "/" ||
@@ -143,13 +143,19 @@ const startMessage = isDevelopment
 
 console.log(startMessage);
 
-// Critical: Set signal to indicate server is ready
-app.addEventListener("listen", () => {
-  console.log(`✅ Server listening on port ${PORT}`);
-});
-
-// Listen - Deno Deploy will use env PORT
-await app.listen({
-  port: PORT,
-  hostname: "0.0.0.0",
-});
+// CRITICAL FIX: Use Deno.serve() for Deno Deploy compatibility
+// This is the proper way to run Oak in Deno Deploy
+Deno.serve(
+  {
+    port: PORT,
+    hostname: "0.0.0.0",
+    onListen: ({ hostname, port }) => {
+      console.log(`✅ Server listening on ${hostname}:${port}`);
+    },
+  },
+  async (request, info) => {
+    // Use Oak's .handle() method instead of .listen()
+    const response = await app.handle(request, info.remoteAddr);
+    return response ?? new Response("Internal Server Error", { status: 500 });
+  },
+);
