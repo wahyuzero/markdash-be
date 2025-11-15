@@ -19,17 +19,15 @@ async function getKey() {
   );
 }
 
-// Hash password with bcrypt
-export async function hashPassword(password: string): Promise<string> {
-  return await bcrypt.hash(password);
+// Hash password with bcrypt (SYNC version for Deno Deploy compatibility)
+// Deno Deploy doesn't support Web Workers, so we use sync methods
+export function hashPassword(password: string): string {
+  return bcrypt.hashSync(password);
 }
 
-// Verify password
-export async function verifyPassword(
-  password: string,
-  hash: string,
-): Promise<boolean> {
-  return await bcrypt.compare(password, hash);
+// Verify password (SYNC version for Deno Deploy compatibility)
+export function verifyPassword(password: string, hash: string): boolean {
+  return bcrypt.compareSync(password, hash);
 }
 
 // Generate JWT token

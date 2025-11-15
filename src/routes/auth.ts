@@ -35,7 +35,7 @@ router.post("/api/register", async (ctx) => {
 
     // Create new user
     const userId = generateId();
-    const passwordHash = await hashPassword(password);
+    const passwordHash = hashPassword(password); // Now sync, no await needed
 
     const newUser: User = {
       id: userId,
@@ -74,7 +74,7 @@ router.post("/api/login", async (ctx) => {
     }
 
     // Verify password
-    const isValid = await verifyPassword(password, user.passwordHash);
+    const isValid = verifyPassword(password, user.passwordHash); // Now sync, no await needed
     if (!isValid) {
       return error(ctx, "Invalid username or password", 401);
     }
