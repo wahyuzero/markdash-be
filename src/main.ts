@@ -144,7 +144,7 @@ const startMessage = isDevelopment
 console.log(startMessage);
 
 // CRITICAL FIX: Use Deno.serve() for Deno Deploy compatibility
-// This is the proper way to run Oak in Deno Deploy
+// Oak's .handle() only accepts Request object (no second parameter for modern Deno)
 Deno.serve(
   {
     port: PORT,
@@ -153,9 +153,9 @@ Deno.serve(
       console.log(`✅ Server listening on ${hostname}:${port}`);
     },
   },
-  async (request, info) => {
-    // Use Oak's .handle() method instead of .listen()
-    const response = await app.handle(request, info.remoteAddr);
+  async (request) => {
+    // Use Oak's .handle() method with just the Request object
+    const response = await app.handle(request);
     return response ?? new Response("Internal Server Error", { status: 500 });
   },
 );
