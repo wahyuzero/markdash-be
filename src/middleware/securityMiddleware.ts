@@ -83,8 +83,8 @@ export function rateLimitMiddleware(options?: {
  */
 export function authRateLimitMiddleware() {
   return rateLimitMiddleware({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 5, // Only 5 attempts per 15 minutes
+    windowMs: 8 * 60 * 1000, // 15 minutes
+    maxRequests: 25, // Only 5 attempts per 15 minutes
     message: "Too many authentication attempts, please try again later",
   });
 }
