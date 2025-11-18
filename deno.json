@@ -27,5 +27,16 @@
       "tags": ["recommended"]
     }
   },
-  "exclude": [".git", ".env", "*.md", ".vscode", "node_modules", "dist"]
+  "exclude": [
+    ".git",
+    ".env",
+    "*.md",
+    ".vscode",
+    "node_modules",
+    "dist"
+  ],
+  "deploy": {
+    "org": "wahyuzero",
+    "app": "birthday-letter"
+  }
 }

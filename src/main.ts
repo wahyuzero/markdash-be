@@ -8,6 +8,24 @@ import logsRouter from "./routes/logs.ts";
 import notifyRouter from "./routes/notify.ts";
 import exportRouter from "./routes/export.ts";
 
+// Security & Performance Middleware
+import {
+  rateLimitMiddleware,
+  authRateLimitMiddleware,
+  requestSizeLimiter,
+  securityHeaders,
+  requestValidator,
+} from "./middleware/securityMiddleware.ts";
+
+import {
+  cacheMiddleware,
+  compressionHint,
+  timeoutMiddleware,
+  performanceMonitor,
+  etagMiddleware,
+  keepAliveMiddleware,
+} from "./middleware/performanceMiddleware.ts";
+
 // Initialize Deno KV
 await initKV();
 console.log("✅ Deno KV initialized");
@@ -22,13 +40,38 @@ console.log(`Environment: ${isDevelopment ? "development" : "production"}`);
 console.log(`Port: ${PORT}`);
 
 // CORS middleware
-app.use(
-  oakCors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  }),
-);
+app.use(oakCors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
+
+// Security Middleware (Applied to all routes)
+app.use(securityHeaders()); // Add security headers
+app.use(requestValidator()); // Validate request patterns
+app.use(requestSizeLimiter(5 * 1024 * 1024)); // Max 5MB request body
+app.use(rateLimitMiddleware({ // General rate limiting
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 100, // 100 requests per window
+}));
+
+// Performance Middleware (Applied to all routes)
+app.use(performanceMonitor()); // Track response times
+app.use(timeoutMiddleware(30000)); // 30 second timeout
+app.use(compressionHint()); // Add compression hints
+app.use(keepAliveMiddleware()); // Enable keep-alive
+app.use(etagMiddleware()); // Add ETags for caching
+app.use(cacheMiddleware({ // Cache GET requests
+  ttl: 2 * 60 * 1000, // 2 minutes cache
+  cacheable: (ctx) => {
+    // Only cache public endpoints
+    return ctx.request.method === "GET" && (
+      ctx.request.url.pathname === "/" ||
+      ctx.request.url.pathname === "/api" ||
+      ctx.request.url.pathname.startsWith("/api/public/")
+    );
+  },
+}));
 
 // Logger middleware (only in development)
 if (isDevelopment) {
@@ -36,9 +79,7 @@ if (isDevelopment) {
     const start = Date.now();
     await next();
     const ms = Date.now() - start;
-    console.log(
-      `${ctx.request.method} ${ctx.request.url.pathname} - ${ctx.response.status} - ${ms}ms`,
-    );
+    console.log(`${ctx.request.method} ${ctx.request.url.pathname} - ${ctx.response.status} - ${ms}ms`);
   });
 }
 
@@ -57,7 +98,19 @@ app.use(async (ctx, next) => {
   }
 });
 
-// Routes
+// Routes with specific rate limiting
+
+// Auth routes with strict rate limiting (prevent brute force)
+const authRateLimiter = authRateLimitMiddleware();
+app.use(async (ctx, next) => {
+  if (ctx.request.url.pathname.startsWith("/api/register") ||
+      ctx.request.url.pathname.startsWith("/api/login")) {
+    await authRateLimiter(ctx, next);
+  } else {
+    await next();
+  }
+});
+
 app.use(authRouter.routes());
 app.use(authRouter.allowedMethods());
 
@@ -75,10 +128,7 @@ app.use(exportRouter.allowedMethods());
 
 // Health check endpoint - MUST be last
 app.use((ctx) => {
-  if (
-    ctx.request.url.pathname === "/" ||
-    ctx.request.url.pathname === "/health"
-  ) {
+  if (ctx.request.url.pathname === "/" || ctx.request.url.pathname === "/health") {
     ctx.response.status = 200;
     ctx.response.headers.set("Content-Type", "application/json");
     ctx.response.body = {
@@ -137,7 +187,7 @@ app.use((ctx) => {
   }
 });
 
-const startMessage = isDevelopment
+const startMessage = isDevelopment 
   ? `🚀 MarkDash API (DEV) running on http://localhost:${PORT}`
   : `🚀 MarkDash API (PROD) running`;
 
@@ -145,17 +195,14 @@ console.log(startMessage);
 
 // CRITICAL FIX: Use Deno.serve() for Deno Deploy compatibility
 // Oak's .handle() only accepts Request object (no second parameter for modern Deno)
-Deno.serve(
-  {
-    port: PORT,
-    hostname: "0.0.0.0",
-    onListen: ({ hostname, port }) => {
-      console.log(`✅ Server listening on ${hostname}:${port}`);
-    },
+Deno.serve({
+  port: PORT,
+  hostname: "0.0.0.0",
+  onListen: ({ hostname, port }) => {
+    console.log(`✅ Server listening on ${hostname}:${port}`);
   },
-  async (request) => {
-    // Use Oak's .handle() method with just the Request object
-    const response = await app.handle(request);
-    return response ?? new Response("Internal Server Error", { status: 500 });
-  },
-);
+}, async (request) => {
+  // Use Oak's .handle() method with just the Request object
+  const response = await app.handle(request);
+  return response ?? new Response("Internal Server Error", { status: 500 });
+});
